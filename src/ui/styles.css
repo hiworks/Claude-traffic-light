@@ -1,0 +1,175 @@
+/* Claude Traffic Light — Responsive layout
+ * The widget fills the BrowserWindow (which is sized by main.js based on
+ * scale). All sizes use percentages / em / flex so the layout is correct
+ * from the very first paint, even before any async IPC has resolved. */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  -webkit-app-region: drag;
+  user-select: none;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #2e2e33;
+}
+
+body {
+  border-radius: 0.4em;        /* proportional to widget width */
+  display: flex;
+}
+
+.light-widget {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2% 4% 1.5% 4%;
+  position: relative;
+  overflow: hidden;
+}
+
+.housing {
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5% 6%;
+  gap: 4%;
+  background: linear-gradient(145deg, #4a4a4a, #3a3a3a 40%, #2e2e2e);
+  border-radius: 1em;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  position: relative;
+  min-height: 0;                 /* allow flex children to shrink */
+}
+.housing::before {
+  content: '';
+  position: absolute;
+  top: 3%;
+  left: 8%;
+  right: 8%;
+  height: 5%;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.12), transparent);
+  border-radius: 50% 50% 50% 50% / 100% 100% 50% 50%;
+}
+
+.light.red, .light.yellow, .light.green {
+  position: relative;
+  width: 70%;
+  aspect-ratio: 1;              /* size purely from width → always circular */
+  border-radius: 50%;
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;               /* don't let flex squish the circle */
+}
+.light-inner {
+  width: 100%; height: 100%; border-radius: 50%;
+  position: relative; z-index: 2;
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+.glow {
+  position: absolute; top: -7%; left: -7%; right: -7%; bottom: -7%;
+  border-radius: 50%; z-index: 1; opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+/* Dim */
+.light.red .light-inner    { background: radial-gradient(circle at 40% 38%, #5c2020, #3d1515 60%, #2e0e0e); }
+.light.yellow .light-inner  { background: radial-gradient(circle at 40% 38%, #5c5020, #3d3415 60%, #2e280e); }
+.light.green .light-inner   { background: radial-gradient(circle at 40% 38%, #205c2e, #153d1e 60%, #0e2e14); }
+
+/* Active */
+.light.red.active .light-inner {
+  background: radial-gradient(circle at 40% 38%, #ff6b6b, #ee3333 40%, #cc2222);
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.2), inset 0 2px 6px rgba(255,200,200,0.3);
+}
+.light.yellow.active .light-inner {
+  background: radial-gradient(circle at 40% 38%, #ffe066, #ffcc00 40%, #e6b800);
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.15), inset 0 2px 6px rgba(255,255,200,0.4);
+}
+.light.green.active .light-inner {
+  background: radial-gradient(circle at 40% 38%, #6bff8d, #33cc55 40%, #22aa44);
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.15), inset 0 2px 6px rgba(200,255,200,0.3);
+}
+
+.light.red.active .glow {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(255,50,50,0.3), transparent 70%);
+  box-shadow: 0 0 24px 6px rgba(255,50,50,0.4);
+  animation: pulse-red 2s ease-in-out infinite;
+}
+.light.yellow.active .glow {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(255,200,0,0.3), transparent 70%);
+  box-shadow: 0 0 24px 6px rgba(255,200,0,0.35);
+  animation: pulse-yellow 2s ease-in-out infinite;
+}
+.light.green.active .glow {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(50,255,80,0.3), transparent 70%);
+  box-shadow: 0 0 24px 6px rgba(50,255,80,0.35);
+  animation: pulse-green 2s ease-in-out infinite;
+}
+
+@keyframes pulse-red    { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+@keyframes pulse-yellow { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+@keyframes pulse-green  { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+
+.light:hover { transform: scale(1.06); }
+
+/* Session dots — pushed to bottom area */
+.session-dots {
+  display: flex; gap: 4px; align-items: center; justify-content: center;
+  margin-top: auto;
+  padding: 3px 0 2px 0;
+  min-height: 12px;
+  flex-shrink: 0;
+}
+.session-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  transition: all 0.3s ease; cursor: pointer; -webkit-app-region: no-drag;
+  position: relative;
+}
+.session-dot.active { transform: scale(1.3); box-shadow: 0 0 4px 1px currentColor; }
+.session-dot:hover { transform: scale(1.4); }
+.session-dot[data-status="idle"]    { background: #cc4444; color: #cc4444; }
+.session-dot[data-status="waiting"] { background: #ddaa22; color: #ddaa22; }
+.session-dot[data-status="working"] { background: #44cc55; color: #44cc55; }
+.session-dot.active[data-status="idle"]    { box-shadow: 0 0 0 2px rgba(255,255,255,0.6); background: #ff5555; }
+.session-dot.active[data-status="waiting"] { box-shadow: 0 0 0 2px rgba(255,255,255,0.6); background: #ffcc33; }
+.session-dot.active[data-status="working"] { box-shadow: 0 0 0 2px rgba(255,255,255,0.6); background: #55ff77; }
+
+/* Lock button — bottom left, part of flex flow */
+.lock-btn {
+  align-self: flex-start;
+  font-size: 0.75em;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  opacity: 0.4;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  user-select: none;
+  line-height: 1;
+  flex-shrink: 0;
+  transform: translateY(-5px);
+}
+.lock-btn:hover { opacity: 0.8; transform: scale(1.2); }
+.lock-btn.locked {
+  opacity: 1;
+  filter: drop-shadow(0 0 3px rgba(255,200,50,0.6));
+}
+.lock-btn.locked:hover { transform: scale(1.2); }
+
+/* Mini mode — keep proportional, just hide decorations */
+.mini .housing { padding: 4% 5%; gap: 3%; border-radius: 0.9em; }
+.mini .session-dots { display: none; }
+.mini .lock-btn { display: none; }
+.mini .housing::before { display: none; }
+
+.light-widget { transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+.light-widget.switching { transform: scale(0.9); }

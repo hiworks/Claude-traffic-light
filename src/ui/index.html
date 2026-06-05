@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Traffic Light</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="light-widget" id="lightWidget">
+    <div class="housing">
+      <div class="light red" id="redLight">
+        <div class="light-inner"></div>
+        <div class="glow"></div>
+      </div>
+      <div class="light yellow" id="yellowLight">
+        <div class="light-inner"></div>
+        <div class="glow"></div>
+      </div>
+      <div class="light green" id="greenLight">
+        <div class="light-inner"></div>
+        <div class="glow"></div>
+      </div>
+    </div>
+    <div class="session-dots" id="sessionDots"></div>
+    <div class="lock-btn" id="lockBtn">🔓</div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

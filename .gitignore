@@ -1,0 +1,19 @@
+node_modules/
+dist/
+out/
+build/
+*.log
+.DS_Store
+Thumbs.db
+config.json
+.vscode/
+.idea/
+.env
+.env.local
+*.local
+
+# Personal npm config (mirrors, auth tokens) — do not commit
+.npmrc
+
+# Keep .npmrc.example as the tracked template
+!.npmrc.example

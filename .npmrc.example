@@ -1,0 +1,9 @@
+# Example npm configuration. Copy to .npmrc and adjust for your environment.
+# .npmrc itself is gitignored to keep personal mirrors/auth out of the repo.
+#
+# China mainland users: uncomment the mirror lines below for faster downloads.
+# Other regions: leave them commented to use the default registry.npmjs.org.
+
+# registry=https://registry.npmjs.org/
+# electron_mirror=https://npmmirror.com/mirrors/electron/
+# electron_builder_binaries_mirror=https://npmmirror.com/mirrors/electron-builder-binaries/
