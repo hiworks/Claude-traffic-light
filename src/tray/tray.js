@@ -12,9 +12,9 @@ const ASSETS = path.join(__dirname, '..', '..', 'assets');
 
 function createTrayIcon(status) {
   const iconMap = {
-    idle: 'tray-icon-red.ico',
+    idle: 'tray-icon-green.ico',
     waiting: 'tray-icon-yellow.ico',
-    working: 'tray-icon-green.ico',
+    working: 'tray-icon-red.ico',
   };
   const file = iconMap[status] || iconMap.idle;
   const iconPath = path.join(ASSETS, file);
