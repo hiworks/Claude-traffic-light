@@ -6,7 +6,11 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win",
-    "build:portable": "electron-builder --win portable"
+    "build:portable": "electron-builder --win portable",
+    "generate-icons": "node scripts/generate-icon.js"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "author": "",
   "license": "MIT",

@@ -102,24 +102,22 @@ body {
   opacity: 1;
   background: radial-gradient(circle, rgba(255,50,50,0.3), transparent 70%);
   box-shadow: 0 0 24px 6px rgba(255,50,50,0.4);
-  animation: pulse-red 2s ease-in-out infinite;
+  animation: pulse 2s ease-in-out infinite;
 }
 .light.yellow.active .glow {
   opacity: 1;
   background: radial-gradient(circle, rgba(255,200,0,0.3), transparent 70%);
   box-shadow: 0 0 24px 6px rgba(255,200,0,0.35);
-  animation: pulse-yellow 2s ease-in-out infinite;
+  animation: pulse 2s ease-in-out infinite;
 }
 .light.green.active .glow {
   opacity: 1;
   background: radial-gradient(circle, rgba(50,255,80,0.3), transparent 70%);
   box-shadow: 0 0 24px 6px rgba(50,255,80,0.35);
-  animation: pulse-green 2s ease-in-out infinite;
+  animation: pulse 2s ease-in-out infinite;
 }
 
-@keyframes pulse-red    { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
-@keyframes pulse-yellow { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
-@keyframes pulse-green  { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+@keyframes pulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
 
 .light:hover { transform: scale(1.06); }
 
