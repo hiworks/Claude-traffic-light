@@ -6,13 +6,14 @@ const {
   ipcMain,
   screen,
   nativeImage,
+  dialog,
 } = require('electron');
 const path = require('path');
 const { createHttpServer } = require('./src/status/http-server');
 const { createSessionManager } = require('./src/status/session-manager');
 const { createTrayManager } = require('./src/tray/tray');
 const { createStore } = require('./src/config/store');
-const { install: installHooks, uninstall: uninstallHooks, isInstalled: isHooksInstalled } = require('./src/config/hook-installer');
+const { install: installHooks } = require('./src/config/hook-installer');
 const { findClaudeWindow } = require('./src/utils/find-claude-window');
 
 // Suppress GPU cache errors on Windows
@@ -61,9 +62,11 @@ async function followTerminalLoop() {
     // Terminal not found — keep current position
   }
 
-  // Re-schedule only if still enabled
+  // Re-schedule only if still enabled. 300ms keeps the widget visibly
+  // tracking the terminal without spawning a PowerShell process every 50ms
+  // (which would burn CPU for as long as follow-terminal stays on).
   if (store.get('followTerminal')) {
-    followTimer = setTimeout(followTerminalLoop, 50);
+    followTimer = setTimeout(followTerminalLoop, 300);
   }
 }
 
@@ -303,18 +306,6 @@ function setupIpc() {
     }
   });
 
-  ipcMain.on('hide-window', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.hide();
-    }
-  });
-
-  ipcMain.on('show-window', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-    }
-  });
-
   // Tooltip IPC: renderer → main → tooltip window
   ipcMain.on('show-tooltip', (_event, data) => {
     showTooltipAtMainScreen(data.text, data.x, data.y);
@@ -341,14 +332,31 @@ app.whenReady().then(async () => {
   sessionManager = createSessionManager(broadcastStatus);
 
   httpServer = createHttpServer(sessionManager);
-  const actualPort = await httpServer.start();
+  let actualPort;
+  try {
+    actualPort = await httpServer.start();
+  } catch (err) {
+    dialog.showErrorBox(
+      'Claude 红绿灯启动失败',
+      `HTTP server 无法启动: ${err.message}\n\n` +
+        '可能原因: 端口 9527-9531 全部被其他程序占用。\n' +
+        '请关闭可能占用这些端口的程序后重试。',
+    );
+    app.quit();
+    return;
+  }
 
   // Auto-install hooks with the actual port
   const hookResult = installHooks(actualPort);
   if (hookResult.success) {
     console.log(`Hooks auto-configured on port ${actualPort}`);
   } else {
-    console.log(`Hook auto-config failed: ${hookResult.error}`);
+    dialog.showErrorBox(
+      'Hook 自动配置失败',
+      `${hookResult.error}\n\n` +
+        '红绿灯将无法收到 Claude Code 的事件，状态会一直停留在空闲。\n' +
+        '可在系统托盘菜单点 "重新配置 Hook" 重试。',
+    );
   }
 
   createWindow();
