@@ -1,3 +1,5 @@
+param([int]$ExcludePid = 0)
+
 $code = @"
 using System;
 using System.Text;
@@ -29,7 +31,7 @@ public class WF
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT { public int Left, Top, Right, Bottom; }
 
-    public static RECT? Find()
+    public static RECT? Find(int excludePid)
     {
         RECT? result = null;
         EnumWindows((h, _) =>
@@ -47,6 +49,11 @@ public class WF
 
             uint p;
             GetWindowThreadProcessId(h, out p);
+
+            // Skip the caller (passed via -ExcludePid). Belt-and-suspenders
+            // along with the 200px gate above.
+            if (excludePid > 0 && (int)p == excludePid) return true;
+
             try
             {
                 var proc = Process.GetProcessById((int)p);
@@ -77,7 +84,7 @@ public class WF
 
 try {
     Add-Type -TypeDefinition $code -Language CSharp
-    $rect = [WF]::Find()
+    $rect = [WF]::Find($ExcludePid)
     if ($rect) {
         Write-Output "$($rect.Left),$($rect.Top),$($rect.Right),$($rect.Bottom)"
     } else {

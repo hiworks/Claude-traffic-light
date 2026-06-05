@@ -156,8 +156,9 @@ function createSessionManager(broadcastFn) {
           // Some Notification types are idle-intent. Treat conservatively.
           const subtype = data.notification_type || data.subtype;
           if (subtype !== 'idle_prompt' && subtype !== 'permission_prompt') {
-            // Not necessarily idle; ignore
-            break;
+            // Not idle-intent — skip state change AND the broadcast at
+            // the bottom of this function (break would still trigger one).
+            return;
           }
         }
         session.status = 'idle';
