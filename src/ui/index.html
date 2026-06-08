@@ -23,7 +23,15 @@
       </div>
     </div>
     <div class="session-dots" id="sessionDots"></div>
-    <div class="lock-btn" id="lockBtn">🔓</div>
+    <div class="lock-btn" id="lockBtn" aria-label="锁定当前会话">
+      <svg class="lock-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <!-- unlocked: shackle on the left, body on the right -->
+        <path class="lock-shackle-open" d="M7 10V7a5 5 0 0 1 9.9-1"/>
+        <rect class="lock-body" x="4" y="10" width="16" height="11" rx="2"/>
+        <circle class="lock-keyhole" cx="12" cy="15.5" r="1.2" fill="currentColor" stroke="none"/>
+        <line class="lock-keybar" x1="12" y1="15.5" x2="12" y2="17.5"/>
+      </svg>
+    </div>
   </div>
   <script src="renderer.js"></script>
 </body>

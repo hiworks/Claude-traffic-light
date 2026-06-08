@@ -85,10 +85,7 @@ function handleStatusUpdate(data) {
   // If locked session no longer exists, unlock
   if (isLocked && activeSessionId && !sessions.find((s) => s.id === activeSessionId)) {
     isLocked = false;
-    if (lockBtn) {
-      lockBtn.classList.remove('locked');
-      lockBtn.textContent = '🔓';
-    }
+    if (lockBtn) lockBtn.classList.remove('locked');
     if (data.activeSessionId) activeSessionId = data.activeSessionId;
   }
 
@@ -162,13 +159,33 @@ if (lockBtn) {
   });
   lockBtn.addEventListener('mouseleave', hideTooltip);
 
-  lockBtn.addEventListener('click', () => {
-    isLocked = !isLocked;
-    lockBtn.classList.toggle('locked', isLocked);
-    lockBtn.textContent = isLocked ? '🔒' : '🔓';
-    updateLockTooltip();
-  });
+  lockBtn.addEventListener('click', toggleLock);
 }
+
+// Single source of truth for the lock state — shared by the button click
+// and the Ctrl+L keyboard shortcut.
+function toggleLock() {
+  isLocked = !isLocked;
+  if (lockBtn) lockBtn.classList.toggle('locked', isLocked);
+  updateLockTooltip();
+}
+
+// Ctrl+L toggles the active-session lock from the keyboard. We only
+// intercept when no editable element has focus (defensive — the widget
+// has no inputs today, but future-proofs against accidental typing).
+document.addEventListener('keydown', (event) => {
+  const isCtrlL = event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey
+    && (event.key === 'l' || event.key === 'L');
+  if (!isCtrlL) return;
+
+  const target = event.target;
+  const tag = target && target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (target && target.isContentEditable)) {
+    return;
+  }
+  event.preventDefault();
+  toggleLock();
+});
 
 function handleSizeChange(mode) {
   if (widget) widget.classList.toggle('mini', mode === 'mini');
