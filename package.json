@@ -7,7 +7,9 @@
     "start": "electron .",
     "build": "electron-builder --win",
     "build:portable": "electron-builder --win portable",
-    "generate-icons": "node scripts/generate-icon.js"
+    "generate-icons": "node scripts/generate-icon.js",
+    "test": "node --test --test-force-exit test/",
+    "test:coverage": "node --test --test-force-exit --experimental-test-coverage test/"
   },
   "engines": {
     "node": ">=20"
