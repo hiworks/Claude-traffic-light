@@ -25,11 +25,21 @@ public class WF
     [DllImport("user32.dll")]
     private static extern bool GetWindowRect(IntPtr h, out RECT r);
 
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(IntPtr h, int attr, out RECT r, int sz);
+
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
 
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT { public int Left, Top, Right, Bottom; }
+
+    // DWMWA_EXTENDED_FRAME_BOUNDS — the rectangle the user actually
+    // perceives as the window's edge. It includes the OS border and the
+    // title bar, but NOT the DWM drop shadow. GetWindowRect returns the
+    // same plus the shadow; GetClientRect returns the inner content only
+    // (and so is 7-8px inside the perceived edge on Win11).
+    private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
     public static RECT? Find(int excludePid)
     {
@@ -64,13 +74,22 @@ public class WF
 
                 if (isTerminal)
                 {
+                    // Use DWM's extended-frame bounds — the rectangle that
+                    // matches what the user sees as the window edge.
+                    // DwmGetWindowAttribute can fail on very old Windows or
+                    // if DWM is disabled; in that case fall back to the
+                    // outer window rect, which is at most a few px wider.
+                    var ext = new RECT();
+                    int hr = DwmGetWindowAttribute(h, DWMWA_EXTENDED_FRAME_BOUNDS, out ext, System.Runtime.InteropServices.Marshal.SizeOf<RECT>());
+                    var edgeRect = (hr == 0) ? ext : r;
+
                     // Prefer WindowsTerminal over others — keep searching if not WindowsTerminal
                     if (name != "windowsterminal" && result == null)
                     {
-                        result = r;
+                        result = edgeRect;
                         return true; // keep looking for WindowsTerminal
                     }
-                    result = r;
+                    result = edgeRect;
                     return false;
                 }
             }

@@ -16,6 +16,7 @@ const { createStore } = require('./src/config/store');
 const { install: installHooks } = require('./src/config/hook-installer');
 const { findClaudeWindow } = require('./src/utils/find-claude-window');
 const { isBoundsVisible, defaultBounds } = require('./src/utils/bounds');
+const { disableDwmShadow } = require('./src/utils/dwm-shadow');
 
 // Suppress GPU cache errors on Windows
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
@@ -45,13 +46,16 @@ async function followTerminalLoop() {
     const claudeBounds = await findClaudeWindow();
     const trafficBounds = mainWindow.getBounds();
 
-    // Place to the left of terminal; if no room, place to the right
-    // Use content width (widget) not full window width (includes tooltip padding)
+    // Place flush against the terminal's perceived edge — no breathing
+    // room. The widget is meant to sit tightly beside Claude Code, like
+    // a real hardware indicator panel. We use content width (BASE_SIZE
+    // × scale), not the full window width, so any future chrome/frame
+    // doesn't widen the gap.
     const scale = store.get('scale') ?? DEFAULT_SCALE;
     const contentW = Math.round(BASE_SIZE.width * scale);
-    let targetX = claudeBounds.left - contentW - 4;
+    let targetX = claudeBounds.left - contentW;
     if (targetX < 0) {
-      targetX = claudeBounds.right + 4;
+      targetX = claudeBounds.right;
     }
     const targetY = claudeBounds.top;
 
@@ -123,7 +127,7 @@ function createWindow() {
     resizable: true,
     alwaysOnTop: store.get('alwaysOnTop') ?? true,
     skipTaskbar: true,
-    hasShadow: true,
+    hasShadow: false,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -157,6 +161,13 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     const opacity = store.get('opacity') ?? 1.0;
     mainWindow.setOpacity(opacity);
+    // Disable DWM non-client rendering — Electron's `hasShadow: false`
+    // does not stop Windows' DWM from drawing a 5-10px halo around the
+    // window. The halo is what makes the widget look "floating" beside
+    // the terminal even when the rects are flush. Setting
+    // DWMWA_NCRENDERING_POLICY = DWMNCRP_DISABLED tells DWM to skip the
+    // non-client paint pass entirely.
+    disableDwmShadow(mainWindow);
     mainWindow.show();
   });
 
@@ -318,10 +329,10 @@ function setupIpc() {
     try {
       const claudeBounds = await findClaudeWindow();
 
-      // Place to the left of terminal's top-left corner
+      // Place flush against the terminal's top-left corner — no gap.
       const scale = store.get('scale') ?? DEFAULT_SCALE;
       const contentW = Math.round(BASE_SIZE.width * scale);
-      let x = claudeBounds.left - contentW - 4;
+      let x = claudeBounds.left - contentW;
       let y = claudeBounds.top;
 
       mainWindow.setPosition(x, y);

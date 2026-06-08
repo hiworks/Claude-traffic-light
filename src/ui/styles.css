@@ -26,7 +26,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2% 4% 5% 4%;
+  /* Zero padding — the widget sits flush against the terminal with no
+     internal margin. Housing fills the entire window. The lock button
+     and session dots are positioned by their own flex/flex-start, so
+     they no longer rely on widget padding for placement. */
+  padding: 0;
   position: relative;
   overflow: hidden;
 }
@@ -146,9 +150,9 @@ body {
 .session-dot.active[data-status="working"] { background: #ff5555; }
 
 /* Lock button — bottom left, part of flex flow.
-   Sits in the bottom padding of .light-widget (5%) so it can rest
-   comfortably against the body edge without being clipped by the
-   body's border-radius. */
+   With widget padding removed, the lock now sits at the body corner.
+   We add a 2px inset so it doesn't visually clip against the body's
+   0.4em border-radius. */
 .lock-btn {
   align-self: flex-start;
   cursor: pointer;
@@ -163,6 +167,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 2px;
+  margin: 2px 0 2px 2px;
 }
 .lock-btn .lock-icon { display: block; }
 .lock-btn:hover { opacity: 0.85; transform: scale(1.2); }
@@ -179,8 +184,11 @@ body {
   d: path("M7 10V7a5 5 0 0 1 10 0");
 }
 
-/* Mini mode — keep proportional, just hide decorations */
-.mini .housing { padding: 4% 5%; gap: 3%; border-radius: 0.9em; }
+/* Mini mode — keep proportional, just hide decorations.
+   Radius is tighter (0.6em vs the normal 1em) because at mini scale the
+   widget is ~76px wide, and a 1em radius on a 5%-padded housing reads
+   as blobby. */
+.mini .housing { padding: 2% 3%; gap: 3%; border-radius: 0.6em; }
 .mini .session-dots { display: none; }
 .mini .lock-btn { display: none; }
 .mini .housing::before { display: none; }
