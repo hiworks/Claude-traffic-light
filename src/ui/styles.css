@@ -123,29 +123,27 @@ body {
 
 /* Session dots — pushed to bottom area */
 .session-dots {
-  display: flex; gap: 5px; align-items: center; justify-content: center;
+  display: flex; gap: 6px; align-items: center; justify-content: center;
   margin-top: auto;
   padding: 3px 0 2px 0;
-  min-height: 12px;
+  min-height: 10px;
   flex-shrink: 0;
 }
 .session-dot {
-  width: 8px; height: 8px; border-radius: 50%;
+  width: 4px; height: 4px; border-radius: 50%;
   transition: all 0.3s ease; cursor: pointer; -webkit-app-region: no-drag;
   position: relative;
-  /* 1px dark outline so each dot reads as a solid marker against the
-     gradient housing — small detail but it kills the "floating smudge"
-     look at small scales. */
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  /* No inset outline at this size — a 1px border would eat the dot
+     entirely. The 6px gap and color contrast do the work. */
 }
-.session-dot.active { transform: scale(1.3); box-shadow: 0 0 4px 1px currentColor, inset 0 0 0 1px rgba(0, 0, 0, 0.35); }
-.session-dot:hover { transform: scale(1.4); }
+.session-dot.active { transform: scale(1.5); }
+.session-dot:hover { transform: scale(1.6); }
 .session-dot[data-status="idle"]    { background: #44cc55; color: #44cc55; }
 .session-dot[data-status="waiting"] { background: #ddaa22; color: #ddaa22; }
 .session-dot[data-status="working"] { background: #cc4444; color: #cc4444; }
-.session-dot.active[data-status="idle"]    { box-shadow: 0 0 0 2px rgba(255,255,255,0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.35); background: #55ff77; }
-.session-dot.active[data-status="waiting"] { box-shadow: 0 0 0 2px rgba(255,255,255,0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.35); background: #ffcc33; }
-.session-dot.active[data-status="working"] { box-shadow: 0 0 0 2px rgba(255,255,255,0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.35); background: #ff5555; }
+.session-dot.active[data-status="idle"]    { background: #55ff77; }
+.session-dot.active[data-status="waiting"] { background: #ffcc33; }
+.session-dot.active[data-status="working"] { background: #ff5555; }
 
 /* Lock button — bottom left, part of flex flow.
    Sits in the bottom padding of .light-widget (5%) so it can rest
