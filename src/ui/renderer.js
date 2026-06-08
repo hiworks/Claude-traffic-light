@@ -9,12 +9,32 @@ let activeSessionId = null;
 let currentScale = 1.0;
 let isLocked = false;
 
-const redLight = document.getElementById('redLight');
-const yellowLight = document.getElementById('yellowLight');
-const greenLight = document.getElementById('greenLight');
-const widget = document.getElementById('lightWidget');
-const sessionDotsContainer = document.getElementById('sessionDots');
-const lockBtn = document.getElementById('lockBtn');
+// Surface any uncaught error to the dev console (visible via F12) instead
+// of dying silently and leaving the user staring at a frozen widget.
+window.addEventListener('error', (event) => {
+  console.error('[renderer] uncaught error:', event.error || event.message);
+});
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[renderer] unhandled rejection:', event.reason);
+});
+
+// Safe element lookup: log a warning and return null if the id is missing
+// (template typo, hot-reload race, etc.) rather than NPE-crashing the
+// renderer and producing a blank white window.
+function $(id) {
+  const el = document.getElementById(id);
+  if (!el) {
+    console.warn(`[renderer] missing element #${id}`);
+  }
+  return el;
+}
+
+const redLight = $('redLight');
+const yellowLight = $('yellowLight');
+const greenLight = $('greenLight');
+const widget = $('lightWidget');
+const sessionDotsContainer = $('sessionDots');
+const lockBtn = $('lockBtn');
 
 // ---- Tooltip via IPC: sends position to main process for overlay window ----
 
@@ -49,7 +69,7 @@ function hideTooltip() {
 function setActiveLight(status) {
   const lights = { red: redLight, yellow: yellowLight, green: greenLight };
   Object.entries(lights).forEach(([color, el]) => {
-    el.classList.toggle('active', color === STATUS_COLORS[status]);
+    if (el) el.classList.toggle('active', color === STATUS_COLORS[status]);
   });
   currentStatus = status;
 }
@@ -65,8 +85,10 @@ function handleStatusUpdate(data) {
   // If locked session no longer exists, unlock
   if (isLocked && activeSessionId && !sessions.find((s) => s.id === activeSessionId)) {
     isLocked = false;
-    lockBtn.classList.remove('locked');
-    lockBtn.textContent = '🔓';
+    if (lockBtn) {
+      lockBtn.classList.remove('locked');
+      lockBtn.textContent = '🔓';
+    }
     if (data.activeSessionId) activeSessionId = data.activeSessionId;
   }
 
@@ -78,8 +100,8 @@ function handleStatusUpdate(data) {
   }
 
   // Session dots — one dot per session, colored by status
-  sessionDotsContainer.innerHTML = '';
-  if (sessions.length >= 1) {
+  if (sessionDotsContainer) sessionDotsContainer.innerHTML = '';
+  if (sessions.length >= 1 && sessionDotsContainer) {
     sessions.forEach((session) => {
       const dot = document.createElement('div');
       dot.className = `session-dot ${session.id === activeSessionId ? 'active' : ''}`;
@@ -106,6 +128,7 @@ function handleStatusUpdate(data) {
 }
 
 function updateDotsActiveState() {
+  if (!sessionDotsContainer) return;
   const dots = sessionDotsContainer.querySelectorAll('.session-dot');
   dots.forEach((dot, i) => {
     const session = sessions[i];
@@ -117,6 +140,7 @@ function updateDotsActiveState() {
 
 // ---- Lock toggle ----
 function updateLockTooltip() {
+  if (!lockBtn) return;
   if (isLocked) {
     const activeSession = sessions.find(s => s.id === activeSessionId);
     if (activeSession) {
@@ -131,21 +155,23 @@ function updateLockTooltip() {
   }
 }
 
-lockBtn.addEventListener('mouseenter', () => {
-  const text = lockBtn.dataset.tooltipText || '点击锁定当前会话';
-  showTooltipFor(lockBtn, text, 'top');
-});
-lockBtn.addEventListener('mouseleave', hideTooltip);
+if (lockBtn) {
+  lockBtn.addEventListener('mouseenter', () => {
+    const text = lockBtn.dataset.tooltipText || '点击锁定当前会话';
+    showTooltipFor(lockBtn, text, 'top');
+  });
+  lockBtn.addEventListener('mouseleave', hideTooltip);
 
-lockBtn.addEventListener('click', () => {
-  isLocked = !isLocked;
-  lockBtn.classList.toggle('locked', isLocked);
-  lockBtn.textContent = isLocked ? '🔒' : '🔓';
-  updateLockTooltip();
-});
+  lockBtn.addEventListener('click', () => {
+    isLocked = !isLocked;
+    lockBtn.classList.toggle('locked', isLocked);
+    lockBtn.textContent = isLocked ? '🔒' : '🔓';
+    updateLockTooltip();
+  });
+}
 
 function handleSizeChange(mode) {
-  widget.classList.toggle('mini', mode === 'mini');
+  if (widget) widget.classList.toggle('mini', mode === 'mini');
 }
 
 // ---- Ctrl + Scroll: Custom Scale ----
@@ -165,8 +191,10 @@ document.addEventListener('wheel', (event) => {
 }, { passive: false });
 
 document.addEventListener('dblclick', () => {
-  widget.classList.add('switching');
-  setTimeout(() => widget.classList.remove('switching'), 300);
+  if (widget) {
+    widget.classList.add('switching');
+    setTimeout(() => widget.classList.remove('switching'), 300);
+  }
   window.__claudeLight.snapToClaude();
 });
 

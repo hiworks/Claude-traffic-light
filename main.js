@@ -15,6 +15,7 @@ const { createTrayManager } = require('./src/tray/tray');
 const { createStore } = require('./src/config/store');
 const { install: installHooks } = require('./src/config/hook-installer');
 const { findClaudeWindow } = require('./src/utils/find-claude-window');
+const { isBoundsVisible, defaultBounds } = require('./src/utils/bounds');
 
 // Suppress GPU cache errors on Windows
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
@@ -84,22 +85,31 @@ function stopFollowTerminal() {
 
 function createWindow() {
   const savedBounds = store.get('windowBounds');
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+  const allDisplays = screen.getAllDisplays();
 
   const scale = store.get('scale') ?? DEFAULT_SCALE;
   const winW = Math.round(BASE_SIZE.width * scale);
   const winH = Math.round(BASE_SIZE.height * scale);
 
-  const defaultX = screenWidth - winW - 20;
-  const defaultY = screenHeight - winH - 20;
-
-  // Validate saved bounds are within visible screen area
-  let startX = savedBounds?.x ?? defaultX;
-  let startY = savedBounds?.y ?? defaultY;
-  if (startX < -2000 || startX > screenWidth || startY < -2000 || startY > screenHeight) {
-    startX = defaultX;
-    startY = defaultY;
+  // Validate saved bounds are within visible screen area on ANY current
+  // display. The old check only tested against the primary display, so a
+  // resolution change or unplugged secondary monitor could leave the
+  // window outside any visible work area — process alive, widget invisible.
+  let startX;
+  let startY;
+  if (
+    savedBounds &&
+    isBoundsVisible(
+      { x: savedBounds.x, y: savedBounds.y, width: winW, height: winH },
+      allDisplays,
+    )
+  ) {
+    startX = savedBounds.x;
+    startY = savedBounds.y;
+  } else {
+    const fallback = defaultBounds(allDisplays, winW, winH);
+    startX = fallback.x;
+    startY = fallback.y;
   }
 
   mainWindow = new BrowserWindow({
@@ -160,6 +170,21 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+}
+
+// Recover from "widget disappeared, process still in tray" by clearing
+// the saved bounds and snapping the window back to a visible default.
+function resetWindowPosition() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const scale = store.get('scale') ?? DEFAULT_SCALE;
+  const winW = Math.round(BASE_SIZE.width * scale);
+  const winH = Math.round(BASE_SIZE.height * scale);
+  const fallback = defaultBounds(screen.getAllDisplays(), winW, winH);
+
+  store.set('windowBounds', { x: fallback.x, y: fallback.y });
+  mainWindow.setPosition(fallback.x, fallback.y);
+  mainWindow.show();
+  mainWindow.focus();
 }
 
 // ---- Tooltip Window: always-on-top, transparent overlay for tooltip text ----
@@ -365,6 +390,7 @@ app.whenReady().then(async () => {
   tray = createTrayManager(mainWindow, sessionManager, store, actualPort, {
     startFollowTerminal,
     stopFollowTerminal,
+    resetWindowPosition,
   });
 
   setupIpc();

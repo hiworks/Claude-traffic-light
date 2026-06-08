@@ -50,6 +50,14 @@ function createTrayManager(mainWindow, sessionManager, store, httpPort, followFn
           }
         },
       },
+      {
+        label: '重置窗口位置',
+        click: () => {
+          if (followFns && typeof followFns.resetWindowPosition === 'function') {
+            followFns.resetWindowPosition();
+          }
+        },
+      },
       { type: 'separator' },
       {
         label: '始终置顶',
