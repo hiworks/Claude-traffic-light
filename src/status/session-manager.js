@@ -40,8 +40,9 @@ function extractCwdBasename(cwd) {
   const normalized = cwd.replace(/[\\/]+$/, '');
   const parts = normalized.split(/[\\/]/);
   const last = parts[parts.length - 1] || '';
-  // Skip if it's just a drive letter
+  // Skip if it's just a drive letter ("C:") or shorter
   if (last.length < 2) return '';
+  if (/^[A-Za-z]:$/.test(last)) return '';
   return last;
 }
 
@@ -215,4 +216,4 @@ function createSessionManager(broadcastFn) {
   };
 }
 
-module.exports = { createSessionManager };
+module.exports = { createSessionManager, extractCwdBasename };
