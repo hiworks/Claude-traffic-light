@@ -10,7 +10,10 @@ const BASE_PORT = 9527;
 const MAX_PORT_ATTEMPTS = 5;
 const PORT_RANGE_END = BASE_PORT + MAX_PORT_ATTEMPTS;
 
-function createHttpServer(sessionManager) {
+function createHttpServer(sessionManager, options = {}) {
+  const basePort = options.basePort ?? BASE_PORT;
+  const maxAttempts = options.maxAttempts ?? MAX_PORT_ATTEMPTS;
+  const portRangeEnd = basePort + maxAttempts - 1;
   let server = null;
   let actualPort = null;
 
@@ -19,8 +22,8 @@ function createHttpServer(sessionManager) {
       let port = startPort;
 
       function tryPort() {
-        if (port > PORT_RANGE_END) {
-          reject(new Error(`No available port in range ${startPort}-${PORT_RANGE_END}`));
+        if (port > portRangeEnd) {
+          reject(new Error(`No available port in range ${startPort}-${portRangeEnd}`));
           return;
         }
 
@@ -97,7 +100,7 @@ function createHttpServer(sessionManager) {
   }
 
   async function start() {
-    actualPort = await findAvailablePort(BASE_PORT);
+    actualPort = await findAvailablePort(basePort);
 
     server = http.createServer(handleRequest);
 
@@ -111,10 +114,13 @@ function createHttpServer(sessionManager) {
   }
 
   function stop() {
-    if (server) {
-      server.close();
-      server = null;
-    }
+    if (!server) return Promise.resolve();
+    return new Promise((resolve) => {
+      server.close(() => {
+        server = null;
+        resolve();
+      });
+    });
   }
 
   function getPort() {
