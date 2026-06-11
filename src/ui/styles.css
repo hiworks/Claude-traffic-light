@@ -16,7 +16,11 @@ html, body {
 }
 
 body {
-  border-radius: 0.4em;        /* proportional to widget width */
+  /* The outermost component. The 0.4em value was barely visible at
+     the default 52px widget width (≈6px on a 16px font). 0.9em
+     gives a clearly rounded silhouette without turning the widget
+     into a pill at small scales. */
+  border-radius: 0.9em;
   display: flex;
 }
 

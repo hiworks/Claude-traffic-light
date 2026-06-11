@@ -22,8 +22,9 @@ npm start
 - 📍 **多 session** — 同时监控多个 Claude Code 终端窗口，每个 session 一个独立小圆点
 - 🏷️ **项目识别** — 悬浮显示项目目录名称（从 hook 提供的 `cwd` 提取）
 - 🔒 **会话锁定** — 锁定关注某个 session，状态不被自动切换覆盖
-- 📌 **跟随终端** — 实时跟随终端窗口位置
-- 🎨 **可定制** — 透明度、缩放（Ctrl+滚轮）、托盘菜单
+- 📌 **跟随终端** — 实时跟随终端窗口位置，widget 紧贴终端左边、顶部对齐
+- 🎨 **可定制** — 透明度、缩放（Ctrl+滚轮 / 直接拖拽窗口边缘）、托盘菜单
+- 🪟 **DPI 缩放兼容** — 在 100% / 125% / 150% 等任意 Windows 显示缩放下都能正确吸附
 - ⚡ **零轮询** — 完全基于 Claude Code 的 hook 事件驱动，空闲时 CPU ≈ 0
 
 ## 架构
@@ -158,7 +159,9 @@ cp .npmrc.example .npmrc
 ### 交互
 
 - **Ctrl + 滚轮** — 缩放红绿灯（0.5x ~ 2.0x）
+- **拖拽窗口边缘** — 自由调整红绿灯大小，比例不会被强制改回
 - **双击** — 吸附到最近的终端窗口
+- **启动时自动吸附** — 每次冷启动约 400ms 后自动贴到主终端左侧、顶部对齐
 - **悬浮小圆点 / 锁按钮** — 显示详情 tooltip（始终在最上层）
 
 ## 配置
@@ -168,7 +171,7 @@ cp .npmrc.example .npmrc
 | 键 | 类型 | 默认值 | 说明 |
 |----|------|--------|------|
 | `windowBounds` | `{x, y}` | 屏幕右下角 | 窗口位置 |
-| `scale` | number | 0.4 | 缩放比例 |
+| `scale` | number | 0.4 | 缩放比例（合法范围 0.5 ~ 2.0；超出范围启动时回退默认） |
 | `sizeMode` | `'normal'` \| `'mini'` | `'normal'` | 大小模式 |
 | `opacity` | 0-1 | 1.0 | 透明度 |
 | `alwaysOnTop` | boolean | true | 始终置顶 |
@@ -196,8 +199,11 @@ cp .npmrc.example .npmrc
 │   │   ├── styles.css
 │   │   └── renderer.js           # 渲染层（灯+圆点+tooltip）
 │   └── utils/
-│       ├── find-claude-window.js
-│       └── find-claude-window.ps1
+│       ├── find-claude-window.js   # 终端窗口查找（含 DPI 缩放换算）
+│       ├── find-claude-window.ps1   # PowerShell 探针（EnumWindows + DWM 边界）
+│       ├── snap.js                 # snap 数学（flush-left, top-aligned）
+│       ├── bounds.js               # savedBounds 跨显示器可见性校验
+│       └── dwm-shadow.js           # 关闭 DWM non-client 渲染避免光晕
 ```
 
 ## 故障排除
