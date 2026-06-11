@@ -48,7 +48,23 @@ function computeFlushLeftPosition(claudeBounds, contentW) {
     x = claudeBounds.right;
   }
   const y = claudeBounds.top;
-  return { x, y };
+  // Round to integers here, not at the call sites. Rationale:
+  //   * findClaudeWindow() divides PowerShell's physical-pixel
+  //     bounds by display.scaleFactor to get DIPs. On a 125% / 150%
+  //     display that gives fractional values (e.g. 354.6, 167.2).
+  //   * BrowserWindow.setPosition's N-API binding uses int32
+  //     conversion and rejects non-integer values with
+  //     "Error processing argument at index 1, conversion failure
+  //     from .". The earlier setBounds call path silently truncated
+  //     the same floats — that was a quirk of the setBounds N-API
+  //     binding (napi_get_value_double), not real tolerance.
+  //   * Rounding in the math function keeps the contract clean:
+  //     "the returned position is ready to hand to setPosition" —
+  //     and one place to fix if the N-API ever changes again.
+  //   * Rounding error is at most 1 DIP (< 2 physical pixels at any
+  //     common Windows DPI), and the follow-loop's SNAP_DEADBAND_PX=2
+  //     absorbs it.
+  return { x: Math.round(x), y: Math.round(y) };
 }
 
 /**
@@ -62,6 +78,12 @@ function computeFlushLeftPosition(claudeBounds, contentW) {
  * @returns {{x:number, y:number}}
  */
 function computeFlushLeftPositionFromScale(claudeBounds, scale, baseW = DEFAULT_BASE_W) {
+  // baseW * scale can also be fractional (e.g. 130 * 0.33 = 42.9).
+  // Round it too, for the same reason: contentW flows into the same
+  // setPosition call that requires integers. The widget's own
+  // BrowserWindow width is rounded by Electron on creation, so the
+  // 1-DIP drift between "width we asked for" and "width we got" is
+  // already there — this just removes the second source.
   return computeFlushLeftPosition(claudeBounds, Math.round(baseW * scale));
 }
 

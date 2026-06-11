@@ -94,6 +94,35 @@ test('zero-width widget: snap target equals terminal.left (no left-side room)', 
   assert.equal(pos.y, 50);
 });
 
+test('rounds fractional DIPs to integers (Electron setPosition requires int32)', () => {
+  // On a 125% / 150% Windows display, findClaudeWindow divides
+  // physical pixels by display.scaleFactor and produces fractional
+  // DIPs. BrowserWindow.setPosition's N-API binding uses int32
+  // conversion and rejects non-integer values with "conversion
+  // failure from .". The previous setBounds path silently truncated
+  // these floats, which is why the bug only surfaced after we
+  // switched to setPosition. The fix rounds in the math function so
+  // every call site gets an int32-ready value.
+  const pos = computeFlushLeftPosition(
+    { left: 397.6, top: 167.2, right: 1820.8, bottom: 979.2 },
+    43,
+  );
+  assert.equal(pos.x, 355);  // 397.6 - 43 = 354.6 → round to 355
+  assert.equal(pos.y, 167);  // 167.2 → round to 167
+});
+
+test('rounds even when the fallback branch fires (terminal at left edge)', () => {
+  // x=30.4, contentW=42.9 → x = 30.4 - 42.9 = -12.5 (negative) →
+  // fallback to right=600 → round(600) = 600. Make sure rounding
+  // applies on the fallback branch, not just the normal branch.
+  const pos = computeFlushLeftPosition(
+    { left: 30.4, top: 12.7, right: 600.3, bottom: 500.9 },
+    42.9,
+  );
+  assert.equal(pos.x, 600);
+  assert.equal(pos.y, 13);
+});
+
 // ---- computeFlushLeftPositionFromScale (scale-based variant) ----
 
 test('scale variant: scale=0.4 → contentW=52 (default baseW 130)', () => {

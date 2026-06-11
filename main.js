@@ -104,12 +104,19 @@ async function followTerminalLoop() {
       throw new Error('no terminal bounds yet');
     }
 
-    // Read the actual widget width. We deliberately do NOT call
-    // lockWidgetSize() here: it would push the height back to the
-    // aspect-ratio-conforming value and "jump back" any size the
-    // user just dragged. The snap target is computed from the live
-    // width, so the position is correct even when the widget is at
-    // a non-conforming size.
+    // Size is the user's domain — we never write it here. The widget
+    // may have been dragged to any width/height (see the 'resize'
+    // handler, which intentionally does not enforce aspect ratio),
+    // and the previous `setBounds({..., width, height})` path was
+    // re-aligning the height to the BASE_SIZE aspect ratio on every
+    // tick, which manifested as the widget "jumping" in size every
+    // time the terminal moved. Now we only set the position; the
+    // BrowserWindow keeps the size the user (or createWindow) gave it.
+    //
+    // We DO still read the widget width, because the snap target is
+    // computed from it: the widget's right edge must line up with the
+    // terminal's left edge, and that calculation needs to know how
+    // wide the widget actually is at this moment.
     const widgetBounds = mainWindow.getBounds();
     const widgetW = widgetBounds.width;
 
@@ -120,7 +127,7 @@ async function followTerminalLoop() {
 
     // Apply the deadband. If the position is within SNAP_DEADBAND_PX
     // of the current position we treat it as "already snapped" — no
-    // setBounds call, no 'moved' event, no debounced persist churn.
+    // setPosition call, no 'moved' event, no debounced persist churn.
     // CRITICAL: do NOT `return` here. The setTimeout that re-arms
     // the loop lives AFTER the try/catch at the bottom of this
     // function. An early `return` would skip it, and the loop would
@@ -131,19 +138,13 @@ async function followTerminalLoop() {
     const dx = targetX - widgetBounds.x;
     const dy = targetY - widgetBounds.y;
     if (Math.abs(dx) > SNAP_DEADBAND_PX || Math.abs(dy) > SNAP_DEADBAND_PX) {
-      // Atomic position+size write: if the position OR size is off,
-      // push both in a single setBounds call. setPosition alone
-      // would leave a window where the renderer is still painting at
-      // the old size, and a subsequent getBounds() could read a
-      // stale width into the next iteration's snap target — causing
-      // the widget to walk left by 1px per loop. setBounds closes
-      // that window in one call.
-      mainWindow.setBounds({
-        x: targetX,
-        y: targetY,
-        width: widgetW,
-        height: widgetBounds.height,
-      });
+      // Position-only write. The previous setBounds call also pushed
+      // width/height "to avoid a 1-frame window where getBounds()
+      // could read a stale width" — but the stale-width concern was
+      // downstream of writing the width, and we no longer write it,
+      // so the race is gone. setPosition is the right primitive for
+      // "follow the terminal, leave my size alone".
+      mainWindow.setPosition(targetX, targetY);
     }
   } catch {
     // Terminal not found — keep current position
@@ -198,8 +199,10 @@ async function autoSnapAtLaunch() {
     // We do NOT call lockWidgetSize() here. The user may have
     // resized the widget freely; the snap target is computed from
     // the live width, so the position is correct regardless of the
-    // height. Forcing a conforming height here would also "jump
-    // back" the user's chosen size.
+    // height. We also no longer write the size back at all — see
+    // the matching comment in `followTerminalLoop`. Pushing the
+    // size on every auto-snap re-asserted the aspect ratio and
+    // clobbered any non-conforming height the user had chosen.
     const widgetBounds = mainWindow.getBounds();
     const widgetW = widgetBounds.width;
     const { x, y } = computeFlushLeftPosition(claudeBounds, widgetW);
@@ -207,24 +210,24 @@ async function autoSnapAtLaunch() {
       `[traffic-light] auto-snap: claudeBounds=${JSON.stringify(claudeBounds)} ` +
       `widgetW=${widgetW} → (${x}, ${y})`,
     );
-    // Atomic setBounds: position + size in a single Electron call.
-    // setPosition alone races the next getBounds() read on Windows;
-    // combining both into setBounds makes the snap target and the
-    // window's actual pixel rect land in the same paint frame.
-    mainWindow.setBounds({
-      x,
-      y,
-      width: widgetW,
-      height: widgetBounds.height,
-    });
+    // Position-only write — size stays whatever createWindow set
+    // it to (or whatever the user has since dragged it to).
+    mainWindow.setPosition(x, y);
     // Do NOT write windowBounds here. The setPosition above will fire
     // a 'moved' event, and the overlap guard returns false for a flush
     // widget (touching-edges semantics in rectsOverlap), so the result
     // is persisted automatically. Keeping the write path single-source
     // is the whole point of the guard.
-  } catch {
+  } catch (err) {
     // No terminal running (or DWM hiccup) — leave the widget where it is.
-    console.log('[traffic-light] auto-snap: no terminal found, keeping current position');
+    // Log the actual error too; the previous generic message made a
+    // setPosition throw (e.g. widget destroyed mid-snap) look identical
+    // to a missing terminal, which made the size-drift fix hard to
+    // diagnose.
+    console.log(
+      `[traffic-light] auto-snap failed: ${err && err.message ? err.message : err}. ` +
+      `Keeping current position.`,
+    );
   }
 }
 
@@ -549,22 +552,17 @@ function setupIpc() {
       // Routed through the shared helper so this site picks up the
       // "< 0 ⇒ fall back to terminal's right side" branch. We do
       // NOT call lockWidgetSize() — the user can resize freely and
-      // the snap target is computed from the live width.
+      // the snap target is computed from the live width. We also
+      // do not write the size back at all; the same rationale as in
+      // `followTerminalLoop` and `autoSnapAtLaunch` applies.
       const widgetBounds = mainWindow.getBounds();
       const widgetW = widgetBounds.width;
       const { x, y } = computeFlushLeftPosition(claudeBounds, widgetW);
 
-      // Atomic setBounds keeps position and size in the same paint
-      // frame — setPosition alone has been seen to leave a 1-frame
-      // window where getBounds() returns the old width, which the
-      // next snap iteration would then read and use to walk the
-      // target left.
-      mainWindow.setBounds({
-        x,
-        y,
-        width: widgetW,
-        height: widgetBounds.height,
-      });
+      // Position-only write. setBounds would also push width/height
+      // and re-assert the BrowserWindow's aspect ratio, clobbering
+      // any non-conforming size the user had chosen via drag.
+      mainWindow.setPosition(x, y);
       store.set('windowBounds', { x, y });
     } catch {
       // Terminal not found — leave widget in place
